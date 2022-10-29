@@ -197,3 +197,228 @@ x(y); // here y is a callback function
 - Issues with Callbacks:
 	- Callback Hell (Pyramid of Doom)
 	- Inversion Control (Control of code lies with Callback Function)
+
+
+### Promise
+- A Promise is an object representing the eventual completion or failure of an Async Operation. 
+- A producing code that does something and takes time. A consuming Code that wants the result of the prior. A promise is a JS object that links the both.
+- Promises possible states:
+	- Pending (initial state)
+	- Fulfilled (completed)
+	- Rejected (Failed)
+```Javascript
+let promise = new Promise(function(resolve,reject){
+	// producing code
+});
+```
+- Arguments resolve and reject are callbacks provided by Javascript.
+	- **resolve(value)** - if job is finished successfully, with result value.
+	- **reject(error)** - if an error has occurred, error is the error object.
+- The promise object returned by the new Promise constructor has these properties.
+	- **state** :
+		- "pending" : Initially
+		- "fulfilled" : Resolved
+		- "rejected" : Rejected/Failed
+	- **result** :
+		- "undefined" : Initially
+		- **value** : when resolved or rejected.
+
+![Promise](assets/languages/javascript/promise_explained.png)
+
+- A promise that is either resolved or rejected is called "settled".
+``` Javascript
+let promise = new Promise(function(resolve,reject){
+	resolve("done");
+	// All further calls of resolve and reject are ignored.
+	reject(new Error("...")); // ignored
+	resolve("..."); // ignored
+});
+```
+
+- **state** and **result** are internal and cannot be directly accessed.
+- Consuming functions can be registered(subscribed) using the methods .then and .catch.
+- **then(f,f)**
+	- It runs when promise is resolved and received the result.
+	- Arguments :
+		- 1st Arg : A function that runs when promise is resolved.
+		- 2nd Arg: A function that runs when promise is rejected.
+```Javascript
+promise.then(
+	function(result) { /* handle a successful result */ },
+	function(error) { /* handle an error */ }
+);
+```
+- **catch(f)**
+	- It runs when promise is rejected.
+- **finally(f)**
+	- It set up a handler for performing cleanup/finalizing at the end.
+	- It runs always in the end.
+
+```Javascript
+new Prmose((resolve,reject)=>{
+ // code here
+})
+.then(()=>{})
+.catch(()=>{})
+.then(()=>{})
+.then(()=>{})
+.finally(()=>{}) // triggers first
+.catch(()=>{}); // .catch shows the error
+```
+- If finally throws an error, then the execution goes to the nearest error handler.
+
+### Promise Chaining
+- To handle sequence of async tasks to perform one after another.
+```Javascript
+new Promise(function(resolve, reject) { 
+	setTimeout(() => resolve(1), 1000); // (*) 
+})
+.then(function(result) { // (**) 
+	alert(result); // 1 
+	return result * 2; 
+})
+.then(function(result) { // (***) 
+	alert(result); // 2 
+	return result * 2; 
+})
+.then(function(result) { 
+	alert(result); // 4 
+	return result * 2; 
+});
+```
+- The result is passed through the chain of .then handlers.
+
+![Promise Chaining](assets/languages/javascript/promise_chaining.png)
+
+### Promise Error Handing
+- Promise chains are great at error handling.
+- When a promise rejects, the control jumps to the closest rejection handler.
+
+### Promise API
+- There are 6 static methods in the Promise class:
+	- Promise.all
+	- Promise.allSettled
+	- Promise.race
+	- Promise.any
+	- Promise.resolve
+	- Promise.reject
+	
+#### Promise.all
+- It allows us to execute many promises in parallel.
+- It waits till all of them are ready.
+- It takes an iterable (array of promises) and returns a new promise.
+- The new promise resolved when all listed promises are resolve and the array of their result becomes its result.
+- The order of the results is same as in its source promise.
+- If any of the promise is rejected, the promise returned by Promise.all immediately rejects with that error.
+- So if one promise rejects, Promise.all immediately rejects. Results of other ones are ignored.
+- **NOTE :** Promise.all does nothing to cancel them, if one fails the others will still continue to execute. **AbortController** helps with the cancellation.
+- It allows non-promise values in the iterable as well.
+```Javascript
+let promise = Promise.all(iterable)
+```
+
+#### Promise.allSettled
+- Similar to Promise.all
+- Promise.allSettled waits for all promises to settle, regardless of the result. (resolved or rejected)
+``` Javascript
+let promise = Promise.allSettled(iterable);
+
+
+let result = [ 
+	{status: 'fulfilled', value: ...response...}, 
+	{status: 'fulfilled', value: ...response...}, 
+	{status: 'rejected', reason: ...error object...} 
+];
+```
+
+#### Promise.race
+- Similar to Promise.all, but waits only for the first settled promise and gets its result (value or error).
+- Promise that settles first becomes the result.
+``` Javascript
+let promise = Promise.race(iterable);
+```
+
+#### Promise.any
+- Similar to Promise.race, but waits only for the first fulfilled promise and gets its result.
+- If all the given promises are rejected, then the return promise is rejected (AggregateError)
+``` Javascript
+let promise = Promise.any(iterable);
+```
+
+#### Promise.resolve
+- Rarely needed (async/await covers it)
+- It creates a resolved promise with the result value.
+- Method is used for compatibility, when a function is expected to return a promise.
+``` Javascript
+let promise = Promise.resolve(value);
+```
+
+#### Promise.reject
+- Rarely needed (async/await covers it)
+- It creates a rejected promise with error.
+``` Javascript
+let promise = Promise.reject(error);
+```
+
+### Promisification
+- It is the conversion of a function that accepts a callback into a function that returns a promise.
+``` Javascript
+function loadFn(src,callback){
+	 // code here
+}
+
+let loadPromise = function(src){
+	return new Promise((resolve,reject)=>{
+		loadFn(src,(err,callback)=>{
+			if(err) reject(err);
+			else resolve(callback);
+		});
+	})
+}
+```
+
+``` Javascript
+// promisification helper function
+function promisify(f){
+	return function(...args){
+		return new Promise((resolve,reject)=>{
+			// custom callback 
+			function callback(err,result){
+				if(err) reject(err);
+				else resolve(result);
+			}
+			// append custom callback to end of arguments
+			args.push(callback);
+			f.call(this,...args); // call the original function
+		});
+	}
+}
+
+// usage
+let promise = promisify(callback);
+promise.then().catch();
+```
+
+
+### Async / Await
+- This is a special syntax to work with promises.
+- It is just a more elegant syntax of getting the promise result than promise.then
+- **async**
+	- "async" keyword is to be placed before a function.
+	- it means a function always returns a promise.
+	- Other values are automatically wrapped in a resolved promise automatically.
+- **await**
+	- works only inside async functions
+	- "await" makes JS wait until the promise settles and returns its result.
+	- It suspends the function execution until the promise settles.
+``` Javascript
+async function f(){
+	let result = await promise;
+	return result;
+}
+
+f();
+```
+
+- Errors are handled using **try...catch**
+- Works well with Promise.all etc as well.
